@@ -1,4 +1,4 @@
-// The definition of all the subcategories used here
+// The definition of all the subcategories used here in the api.
 
 pub mod apps;
 pub mod auth;

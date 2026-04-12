@@ -15,13 +15,30 @@ use uuid::Uuid;
 use crate::db::queries;
 use crate::server::state::{AppState, PortMappingRecord};
 
+/// Valid port range for user-facing external ports.
+/// Ports below 1024 are privileged; ports above 65535 are invalid.
+/// We further restrict to the unprivileged dynamic range.
+const MIN_PORT: u16 = 1024;
+const MAX_PORT: u16 = 65535;
+
 #[derive(Debug, Deserialize)]
 pub struct AddPortRequest {
     pub internal_port: u16,
     pub external_port: Option<u16>,
 }
 
-// Call this to list the ports assigned
+fn validate_port(port: u16) -> Result<(), &'static str> {
+    if port < MIN_PORT {
+        return Err("port must be ≥ 1024 (privileged ports are not allowed)");
+    }
+    // u16 max is 65535 — always valid, but be explicit
+    if port > MAX_PORT {
+        return Err("port must be ≤ 65535");
+    }
+    Ok(())
+}
+
+// List ports assigned to an app
 pub async fn list_ports(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -32,12 +49,21 @@ pub async fn list_ports(
     }
 }
 
-// Add a port
+// Add a port mapping
 pub async fn add_port(
     State(state): State<Arc<AppState>>,
     Path(app_id): Path<Uuid>,
     Json(req): Json<AddPortRequest>,
 ) -> impl IntoResponse {
+    if let Err(msg) = validate_port(req.internal_port) {
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": msg}))).into_response();
+    }
+    if let Some(ext) = req.external_port {
+        if let Err(msg) = validate_port(ext) {
+            return (StatusCode::BAD_REQUEST, Json(json!({"error": msg}))).into_response();
+        }
+    }
+
     match queries::get_app(&state.db, app_id).await {
         Ok(None)    => return (StatusCode::NOT_FOUND, Json(json!({"error": "app not found"}))).into_response(),
         Err(e)      => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
@@ -62,7 +88,7 @@ pub async fn add_port(
     }
 }
 
-// Delete a port through the api
+// Delete a port mapping
 pub async fn delete_port(
     State(state): State<Arc<AppState>>,
     Path((app_id, mapping_id)): Path<(Uuid, Uuid)>,

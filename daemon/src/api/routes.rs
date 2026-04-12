@@ -61,7 +61,7 @@ pub fn router(state: Arc<AppState>) -> Router {
 
         .route_layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
 
-        // WebSocket — own ?key= auth
+        // WebSocket with own ?key= auth
         .route("/apps/{id}/shell", get(ws_shell))
 
         .with_state(state)

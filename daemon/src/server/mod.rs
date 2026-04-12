@@ -2,4 +2,4 @@ pub mod manager;
 pub mod ports;
 pub mod state;
 
-// Definitions
+// Definitions, used for the server management engine.

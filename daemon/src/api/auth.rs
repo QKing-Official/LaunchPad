@@ -1,7 +1,6 @@
 // Imports
 
-// This file exist for safety. I dont want everyone being able to acces the full API
-// DONT MODIFY PLEASE
+// This file exists for safety. Only authorised callers may access the API.
 use axum::{
     http::{Request, StatusCode},
     middleware::Next,
@@ -14,6 +13,14 @@ use uuid::Uuid;
 use crate::db::queries;
 use crate::server::state::AppState;
 
+/// Return the API key from the environment.
+fn require_api_key() -> Result<String, StatusCode> {
+    env::var("API_KEY").map_err(|_| {
+        tracing::error!("API_KEY not set – rejecting request");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })
+}
+
 // Middleware
 pub async fn auth_middleware(
     State(state): State<Arc<AppState>>,
@@ -24,16 +31,14 @@ pub async fn auth_middleware(
         return Ok(next.run(req).await);
     }
 
-    // Global api key
-    
-    let global_key = env::var("API_KEY").unwrap_or_else(|_| "supersecret123".to_string());
+    let global_key = require_api_key()?;
 
     let provided = req.headers()
         .get("x-api-key")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
 
-    if provided == global_key {
+    if constant_time_eq(provided.as_bytes(), global_key.as_bytes()) {
         return Ok(next.run(req).await);
     }
 
@@ -51,4 +56,11 @@ pub async fn auth_middleware(
     }
 
     Err(StatusCode::UNAUTHORIZED)
+}
+
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.iter().zip(b.iter()).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }

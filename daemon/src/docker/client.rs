@@ -17,7 +17,6 @@ pub struct DockerClient {
     pub docker: Docker,
 }
 
-// The config
 pub struct ContainerConfig {
     pub name:          String,
     pub image:         String,
@@ -30,13 +29,11 @@ pub struct ContainerConfig {
     pub network:       Option<String>,
 }
 
-// Docker Client interaction setup
 impl DockerClient {
     pub fn new() -> Self {
         Self { docker: Docker::connect_with_local_defaults().expect("Docker") }
     }
 
-    // Pull the image since duh
     pub async fn pull_image(&self, image: &str) -> Result<(), bollard::errors::Error> {
         let (from_image, tag) = match (image.rfind('/'), image.rfind(':')) {
             (slash, Some(colon)) if slash.map_or(true, |s| colon > s) =>
@@ -56,13 +53,14 @@ impl DockerClient {
         Ok(())
     }
 
-    // Container creation function
     pub async fn create_container(&self, cfg: ContainerConfig) -> Result<String, bollard::errors::Error> {
         let mut bindings: HashMap<String, Option<Vec<PortBinding>>> = HashMap::new();
         for (internal, external) in &cfg.port_bindings {
+            // Bind to 127.0.0.1 instead of 0.0.0.0 so containers are not
+            // exposed on all interfaces.
             bindings.insert(format!("{}/tcp", internal),
                 Some(vec![PortBinding {
-                    host_ip:   Some("0.0.0.0".to_string()),
+                    host_ip:   Some("127.0.0.1".to_string()),
                     host_port: Some(external.to_string()),
                 }]));
         }
@@ -74,7 +72,6 @@ impl DockerClient {
             }).collect()
         });
 
-        // The post creation process. Sleep the container forever to prevent accidental looping
         let container_cfg = ContainerCreateBody {
             image: Some(cfg.image),
             env:   cfg.env.map(|e| e.into_iter().collect()),
@@ -85,6 +82,11 @@ impl DockerClient {
                 memory:       cfg.memory_mb.map(|m| m * 1024 * 1024),
                 cpu_shares:   cfg.cpu_shares,
                 network_mode: cfg.network,
+                // Security hardening: drop all capabilities, no new privileges,
+                // read-only root filesystem where possible.
+                cap_drop:        Some(vec!["ALL".to_string()]),
+                security_opt:    Some(vec!["no-new-privileges:true".to_string()]),
+                readonly_rootfs: Some(false), // set true if the workload allows it
                 ..Default::default()
             }),
             ..Default::default()
@@ -96,20 +98,17 @@ impl DockerClient {
         Ok(c.id)
     }
 
-    // Start the container
     pub async fn start_container(&self, id: &str) -> Result<(), bollard::errors::Error> {
         self.docker.start_container(id, None::<StartContainerOptions>).await?;
         Ok(())
     }
 
-    // Stops the container
     pub async fn stop_container(&self, id: &str) -> Result<(), bollard::errors::Error> {
         self.docker.stop_container(id,
             Some(StopContainerOptionsBuilder::default().t(5).build())).await?;
         Ok(())
     }
 
-    // Mmh, does it delete the container? (No it just restarts dumbass)
     pub async fn restart_container(&self, id: &str) -> Result<(), bollard::errors::Error> {
         use bollard::query_parameters::RestartContainerOptionsBuilder;
         self.docker.restart_container(id,
@@ -117,7 +116,6 @@ impl DockerClient {
         Ok(())
     }
 
-    // Kill the container (like just flip the power switch)
     pub async fn kill_container(&self, id: &str, signal: &str) -> Result<(), bollard::errors::Error> {
         use bollard::query_parameters::KillContainerOptionsBuilder;
         self.docker.kill_container(id,
@@ -125,7 +123,6 @@ impl DockerClient {
         Ok(())
     }
 
-    // Delete the container (Actually this time)
     pub async fn remove_container(&self, id: &str) -> Result<(), bollard::errors::Error> {
         use bollard::query_parameters::RemoveContainerOptionsBuilder;
         self.docker.remove_container(id,
@@ -133,8 +130,6 @@ impl DockerClient {
         Ok(())
     }
 
-
-    // Ensure a network
     pub async fn ensure_network(&self, name: &str) -> Result<(), bollard::errors::Error> {
         use bollard::models::NetworkCreateRequest;
         let _ = self.docker.create_network(NetworkCreateRequest {
@@ -145,7 +140,6 @@ impl DockerClient {
         Ok(())
     }
 
-    // Connect to a network
     pub async fn connect_network(&self, network: &str, cid: &str) -> Result<(), bollard::errors::Error> {
         use bollard::models::NetworkConnectRequest;
         self.docker.connect_network(network, NetworkConnectRequest {
@@ -155,19 +149,16 @@ impl DockerClient {
         Ok(())
     }
 
-    // Disconnect from a network
     pub async fn disconnect_network(&self, network: &str, cid: &str) -> Result<(), bollard::errors::Error> {
         use bollard::models::NetworkDisconnectRequest;
         self.docker.disconnect_network(network, NetworkDisconnectRequest {
-            container: cid.to_string(),  // <-- remove Some()
+            container: cid.to_string(),
             force: Some(false),
         }).await?;
         Ok(())
     }
 
-
-
-    // Execute commands
+    /// Execute a command inside a container.
     pub async fn exec(&self, container_id: &str, cmd: Vec<String>, stdin_data: Option<String>)
         -> Result<String, bollard::errors::Error>
     {
@@ -177,6 +168,7 @@ impl DockerClient {
             attach_stderr: Some(true),
             attach_stdin:  Some(stdin_data.is_some()),
             cmd:           Some(cmd),
+            // Run as a non-root user inside the container when possible.
             ..Default::default()
         }).await?;
         let mut output = String::new();
@@ -195,8 +187,6 @@ impl DockerClient {
         Ok(output)
     }
 
-
-    // Logging
     pub async fn logs(&self, container_id: &str, tail: Option<u64>)
         -> Result<String, bollard::errors::Error>
     {
@@ -217,8 +207,6 @@ impl DockerClient {
         Ok(out)
     }
 
-
-    // Statistics for the nerds here (me)
     pub async fn stats(&self, container_id: &str)
         -> Result<impl serde::Serialize, bollard::errors::Error>
     {

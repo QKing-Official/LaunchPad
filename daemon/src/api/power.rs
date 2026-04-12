@@ -20,7 +20,11 @@ pub struct PowerRequest {
     pub signal: Option<String>,
 }
 
-// Fire webhook for power actions for no reason at all. I love the webhook
+/// Allowed POSIX signal names for the `kill` action.
+const ALLOWED_SIGNALS: &[&str] = &[
+    "SIGKILL", "SIGTERM", "SIGHUP", "SIGUSR1", "SIGUSR2", "SIGINT",
+];
+
 async fn fire(db: &sqlx::PgPool, app_id: Uuid, status: &str, app_name: &str) {
     let hooks = match queries::list_webhooks(db, app_id).await {
         Ok(h)  => h,
@@ -36,6 +40,7 @@ async fn fire(db: &sqlx::PgPool, app_id: Uuid, status: &str, app_name: &str) {
         tokio::spawn(async move {
             let client = reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
+                .danger_accept_invalid_certs(false)
                 .build().unwrap_or_default();
             match client.post(&url).json(&body).send().await {
                 Ok(r)  => tracing::info!("Webhook {} -> {}", url, r.status()),
@@ -45,13 +50,27 @@ async fn fire(db: &sqlx::PgPool, app_id: Uuid, status: &str, app_name: &str) {
     }
 }
 
-// Perform the webhook actions themself (start stop restart kill)
-// All through same api route
+// Perform power actions: start / stop / restart / kill
 pub async fn power_action(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     Json(req): Json<PowerRequest>,
 ) -> impl IntoResponse {
+    // Validate action early
+    if !["start", "stop", "restart", "kill"].contains(&req.action.as_str()) {
+        return (StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("unknown action '{}', use: start|stop|restart|kill", req.action)}))).into_response();
+    }
+
+    // Validate signal if provided
+    if req.action == "kill" {
+        let signal = req.signal.as_deref().unwrap_or("SIGKILL");
+        if !ALLOWED_SIGNALS.contains(&signal) {
+            return (StatusCode::BAD_REQUEST,
+                Json(json!({"error": format!("signal '{}' is not allowed; permitted: {:?}", signal, ALLOWED_SIGNALS)}))).into_response();
+        }
+    }
+
     let app = match queries::get_app(&state.db, id).await {
         Ok(Some(a)) => a,
         Ok(None)    => return (StatusCode::NOT_FOUND, Json(json!({"error": "not found"}))).into_response(),
@@ -93,8 +112,8 @@ pub async fn power_action(
             }
             (r.map_err(|e| e.to_string()), "stopped")
         }
-        other => return (StatusCode::BAD_REQUEST,
-            Json(json!({"error": format!("unknown action '{}', use: start|stop|restart|kill", other)}))).into_response(),
+        // Unreachable due to early validation above
+        _ => unreachable!(),
     };
 
     match result {

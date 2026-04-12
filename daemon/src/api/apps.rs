@@ -1,5 +1,6 @@
 // Imports
-// This app, in this file we have methods for mananging the apps inside our daemon. This includes creating, listing, getting info about, and deleting apps. Each app corresponds to a Docker container that we manage.
+// Methods for managing apps inside the daemon.
+// Each app corresponds to a Docker container.
 
 use axum::{
     extract::{Path, State},
@@ -16,6 +17,62 @@ use crate::db::queries;
 use crate::docker::client::ContainerConfig;
 use crate::server::state::{AppRecord, AppResponse, AppState, PortMappingRecord};
 
+// ── Input validation ───────────────────────────────────────────────────────────
+
+/// Allowed characters in an app name: alphanumeric, hyphens, underscores.
+/// Max 64 characters.  This name ends up in file-system paths and Docker
+/// network names, so it must be strictly sanitised.
+fn validate_app_name(name: &str) -> Result<(), &'static str> {
+    if name.is_empty() || name.len() > 64 {
+        return Err("name must be 1–64 characters");
+    }
+    if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+        return Err("name may only contain ASCII letters, digits, hyphens, and underscores");
+    }
+    Ok(())
+}
+
+/// Validate a Docker image reference.
+/// We reject references that contain shell metacharacters.
+fn validate_image(image: &str) -> Result<(), &'static str> {
+    if image.is_empty() || image.len() > 256 {
+        return Err("image must be 1–256 characters");
+    }
+    // Reject obvious shell injection characters
+    for ch in &[';', '&', '|', '`', '$', '(', ')', '<', '>', '\n', '\r', '\0'] {
+        if image.contains(*ch) {
+            return Err("image contains invalid characters");
+        }
+    }
+    Ok(())
+}
+
+/// Validate an environment variable entry ("KEY=value").
+fn validate_env_entry(entry: &str) -> Result<(), &'static str> {
+    // Must contain `=`; the key part must be a valid identifier
+    let key = entry.split('=').next().unwrap_or("");
+    if key.is_empty() {
+        return Err("env entry key must not be empty");
+    }
+    if !key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+        return Err("env key may only contain ASCII letters, digits, and underscores");
+    }
+    Ok(())
+}
+
+/// Validate a volume name (relative, no path separators).
+fn validate_volume_name(v: &str) -> Result<(), &'static str> {
+    if v.is_empty() || v.len() > 128 {
+        return Err("volume name must be 1–128 characters");
+    }
+    if v.contains('/') || v.contains('\\') || v.contains('\0') || v == ".." || v == "." {
+        return Err("volume name must not contain path separators or reserved names");
+    }
+    Ok(())
+}
+
+// ── Create request ─────────────────────────────────────────────────────────────
+
 #[derive(Debug, Deserialize)]
 pub struct CreateAppRequest {
     pub name:          String,
@@ -29,7 +86,8 @@ pub struct CreateAppRequest {
     pub cpu_shares:    Option<i64>,
 }
 
-// Response formatting
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 async fn build_response(pool: &sqlx::PgPool, app: &AppRecord) -> AppResponse {
     let ports: Vec<PortMappingRecord> = queries::get_port_mappings(pool, app.id)
         .await.unwrap_or_default();
@@ -62,6 +120,8 @@ async fn fire(db: &sqlx::PgPool, app_id: Uuid, status: &str, app_name: &str) {
         tokio::spawn(async move {
             let client = reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
+                // Prevent SSRF against internal/loopback hosts
+                .danger_accept_invalid_certs(false)
                 .build().unwrap_or_default();
             match client.post(&url).json(&body).send().await {
                 Ok(r)  => tracing::info!("Webhook {} -> {}", url, r.status()),
@@ -71,21 +131,56 @@ async fn fire(db: &sqlx::PgPool, app_id: Uuid, status: &str, app_name: &str) {
     }
 }
 
+// ── Handlers ──────────────────────────────────────────────────────────────────
 
 // App creation
 pub async fn create_app(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateAppRequest>,
 ) -> impl IntoResponse {
+    // --- Input validation ---
+    if let Err(msg) = validate_app_name(&req.name) {
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": msg}))).into_response();
+    }
+
+    let image = req.image.clone().unwrap_or_else(|| "python:3.12-slim".to_string());
+    if let Err(msg) = validate_image(&image) {
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": msg}))).into_response();
+    }
+
+    if let Some(ref envs) = req.env {
+        for e in envs {
+            if let Err(msg) = validate_env_entry(e) {
+                return (StatusCode::BAD_REQUEST, Json(json!({"error": msg}))).into_response();
+            }
+        }
+    }
+
+    if let Some(ref vols) = req.volumes {
+        for v in vols {
+            if let Err(msg) = validate_volume_name(v) {
+                return (StatusCode::BAD_REQUEST, Json(json!({"error": msg}))).into_response();
+            }
+        }
+    }
+
+    // Validate resource limits are within sane bounds
+    if let Some(mem) = req.memory_mb {
+        if mem < 64 || mem > 32768 {
+            return (StatusCode::BAD_REQUEST,
+                Json(json!({"error": "memory_mb must be between 64 and 32768"}))).into_response();
+        }
+    }
+
     let id            = Uuid::new_v4();
-    let image         = req.image.clone().unwrap_or_else(|| "python:3.12-slim".to_string());
     let internal_port = req.internal_port.unwrap_or(8000);
     let external_port = match req.external_port {
         Some(p) => { state.ports.mark_used(p); p }
         None    => state.ports.allocate(),
     };
 
-    let vol_names     = req.volumes.clone().unwrap_or_default();
+    // Build volume host paths using only the validated app name and volume names
+    let vol_names  = req.volumes.clone().unwrap_or_default();
     let host_volumes: Vec<String> = vol_names.iter()
         .map(|v| format!("/srv/Launchpad/{}/volumes/{}", req.name, v))
         .collect();

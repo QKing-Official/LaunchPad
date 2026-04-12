@@ -8,13 +8,17 @@ pub struct Config {
     pub database_url: String,
 }
 
-
-// Load the information from the .env
-// This is currently just the API key and the port
-// If one of those are changed they are changes across all areas of the daemon
-// So please be careful!
+// Load configuration from environment.
+// Fail if api key is not matching requirements
 pub fn load() -> Config {
     dotenvy::dotenv().ok();
+
+    let api_key = env::var("API_KEY")
+        .expect("API_KEY must be set in the environment (no default allowed)");
+
+    if api_key.len() < 32 {
+        panic!("API_KEY must be at least 32 characters long");
+    }
 
     Config {
         port: env::var("PORT")
@@ -22,8 +26,7 @@ pub fn load() -> Config {
             .parse()
             .expect("PORT must be a number"),
 
-        api_key: env::var("API_KEY")
-            .unwrap_or_else(|_| "supersecret123".into()),
+        api_key,
 
         database_url: env::var("DATABASE_URL")
             .expect("DATABASE_URL must be set"),
