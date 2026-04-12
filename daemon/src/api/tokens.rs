@@ -1,4 +1,7 @@
 // Imports
+
+// This is so we can isolate user based actions and global daemon actions.
+// The global api key still works on the user routes for ease of use.
 use axum::{
     extract::{Path, State},
     http::{Request, StatusCode},

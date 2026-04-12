@@ -120,3 +120,13 @@ If you are reading this it is probably not done yet, but it works.
 I advise you to not use this in production at the time I write this.
 This readme will be updated and there will be stated otherwise when it is fully done.
 
+## Commenting
+
+For all comments I do not care, but if you wish to make it easier for me. Use this format:
+
+// TODO: → Orange
+// FIXME: → Red
+// NOTE: → Blue
+// * Important → Bold
+
+Thanks!

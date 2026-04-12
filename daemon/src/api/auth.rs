@@ -1,5 +1,7 @@
 // Imports
 
+// This file exist for safety. I dont want everyone being able to acces the full API
+// DONT MODIFY PLEASE
 use axum::{
     http::{Request, StatusCode},
     middleware::Next,

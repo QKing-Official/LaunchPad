@@ -73,6 +73,8 @@ impl DockerClient {
                 format!("{}:/data/{}:rw", p, b)
             }).collect()
         });
+
+        // The post creation process. Sleep the container forever to prevent accidental looping
         let container_cfg = ContainerCreateBody {
             image: Some(cfg.image),
             env:   cfg.env.map(|e| e.into_iter().collect()),

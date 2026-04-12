@@ -1,5 +1,7 @@
 // Imports
 
+// Yeah, webhooks. I am going to attach webhooks and webhook configs for each user action.
+// This makes it that the user can easily log and build automations on top of their server
 use axum::{
     extract::{Path, State},
     http::StatusCode,

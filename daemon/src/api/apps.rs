@@ -1,4 +1,5 @@
 // Imports
+// This app, in this file we have methods for mananging the apps inside our daemon. This includes creating, listing, getting info about, and deleting apps. Each app corresponds to a Docker container that we manage.
 
 use axum::{
     extract::{Path, State},

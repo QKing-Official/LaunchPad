@@ -18,11 +18,13 @@ mod utils;
 use crate::docker::client::DockerClient;
 use crate::server::state::AppState;
 
+// Main function, responsible for everything
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Load the info from env and start the daemon with it
     dotenvy::dotenv().ok();
 
+    // Trace the logs
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env().add_directive("daemon=debug".parse()?))
         .init();
@@ -41,7 +43,8 @@ async fn main() -> anyhow::Result<()> {
 
     let cors = CorsLayer::new().allow_origin(Any).allow_headers(Any).allow_methods(Any);
     let app  = api::routes::router(state).layer(cors);
-    // Actually start the webserver api
+    // Actually start the webserver api. HTTP API for ease
+    
     let addr = format!("0.0.0.0:{}", cfg.port);
     let listener = TcpListener::bind(&addr).await?;
     info!("Daemon listening on http://{}", addr);
