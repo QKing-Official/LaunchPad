@@ -29,6 +29,8 @@ pub struct ContainerConfig {
     pub network:       Option<String>,
 }
 
+// Docker client, the main docker function
+// This handles the pulling of images, the first step of the creation process
 impl DockerClient {
     pub fn new() -> Self {
         Self { docker: Docker::connect_with_local_defaults().expect("Docker") }
@@ -53,6 +55,8 @@ impl DockerClient {
         Ok(())
     }
 
+    // This functions checks the image and makes a container with it
+    // It also scans all information it got to create the server with it.
     pub async fn create_container(&self, cfg: ContainerConfig) -> Result<String, bollard::errors::Error> {
         let mut bindings: HashMap<String, Option<Vec<PortBinding>>> = HashMap::new();
         for (internal, external) in &cfg.port_bindings {
@@ -72,6 +76,8 @@ impl DockerClient {
             }).collect()
         });
 
+        // Fetch the config parsed from creation and let the container sleep forever
+        // Sleeping will stop after a command is ran
         let container_cfg = ContainerCreateBody {
             image: Some(cfg.image),
             env:   cfg.env.map(|e| e.into_iter().collect()),
@@ -83,7 +89,7 @@ impl DockerClient {
                 cpu_shares:   cfg.cpu_shares,
                 network_mode: cfg.network,
                 // Security hardening: drop all capabilities, no new privileges,
-                // read-only root filesystem where possible.
+                // read-only root filesystem where possible to prevent escaping the container
                 cap_drop:        Some(vec!["ALL".to_string()]),
                 security_opt:    Some(vec!["no-new-privileges:true".to_string()]),
                 readonly_rootfs: Some(false), // set true if the workload allows it
@@ -98,17 +104,22 @@ impl DockerClient {
         Ok(c.id)
     }
 
+
+    // Perform a power action start to the container
     pub async fn start_container(&self, id: &str) -> Result<(), bollard::errors::Error> {
         self.docker.start_container(id, None::<StartContainerOptions>).await?;
         Ok(())
     }
 
+
+    // Shut the container gracefully down. This is not forced
     pub async fn stop_container(&self, id: &str) -> Result<(), bollard::errors::Error> {
         self.docker.stop_container(id,
             Some(StopContainerOptionsBuilder::default().t(5).build())).await?;
         Ok(())
     }
 
+    // Perform a restart action on your container for easy of use. I aint letting users use start and stop for it. That is evil
     pub async fn restart_container(&self, id: &str) -> Result<(), bollard::errors::Error> {
         use bollard::query_parameters::RestartContainerOptionsBuilder;
         self.docker.restart_container(id,
@@ -116,6 +127,7 @@ impl DockerClient {
         Ok(())
     }
 
+    // KILL IT. This will kill the container, this is forcefully done
     pub async fn kill_container(&self, id: &str, signal: &str) -> Result<(), bollard::errors::Error> {
         use bollard::query_parameters::KillContainerOptionsBuilder;
         self.docker.kill_container(id,
@@ -123,6 +135,8 @@ impl DockerClient {
         Ok(())
     }
 
+    // Remove the container, probably useful for user management later on for whoever builds around this daemon.
+    // It litterly removes it, no bullshit
     pub async fn remove_container(&self, id: &str) -> Result<(), bollard::errors::Error> {
         use bollard::query_parameters::RemoveContainerOptionsBuilder;
         self.docker.remove_container(id,

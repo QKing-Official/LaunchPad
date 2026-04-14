@@ -33,6 +33,7 @@ static TEMPLATE_MAP: Lazy<HashMap<String, Template>> = Lazy::new(|| {
 });
 
 // Get the templates
+// PARSE THOSE THING TO THE DAEMON!!
 #[inline]
 pub fn get_template(name: &str) -> Option<&'static Template> {
     TEMPLATE_MAP.get(name)
