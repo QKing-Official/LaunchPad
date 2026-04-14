@@ -1,26 +1,39 @@
-// Imports
+use once_cell::sync::Lazy;
+use serde::Deserialize;
+use std::{collections::HashMap, fs};
 
+// So okay, this file is used to get the templates
+// Templates are docker container images with an internal port defined that is premapped to the external port.
+// You have templates.json file for that.
+// There are all the templates defined and you can also easily add more.
+// This makes sure everything is dynamic
+// Soon I will add an api route for adding more templates
+// Currently I will just optimise the code
+// I gave up on the frontend....
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct Template {
-    pub name: &'static str,
-    pub image: &'static str,
+    pub name: String,
+    pub image: String,
     pub default_internal_port: u16,
 }
 
-// Here are the images that are presets.
-// I want dynamic though
-pub const TEMPLATES: &[Template] = &[
-    Template { name: "python",  image: "python:3.12-slim", default_internal_port: 8000 },
-    Template { name: "node",    image: "node:20-slim",     default_internal_port: 3000 },
-    Template { name: "rust",    image: "rust:latest",      default_internal_port: 8080 },
-    Template { name: "ubuntu",  image: "ubuntu:22.04",     default_internal_port: 22   },
-    Template { name: "ubuntu",  image: "ubuntu:24.04",     default_internal_port: 22   },
-    Template { name: "alpine",  image: "alpine:latest",    default_internal_port: 22   },
-    Template { name: "postgres",image: "postgres:16",      default_internal_port: 5432 },
-];
+// Parse json
+static TEMPLATE_MAP: Lazy<HashMap<String, Template>> = Lazy::new(|| {
+    let data = fs::read_to_string("templates.json")
+        .expect("Failed to read templates.json");
 
+    let templates: Vec<Template> =
+        serde_json::from_str(&data).expect("Invalid JSON");
+
+    templates
+        .into_iter()
+        .map(|t| (t.name.clone(), t))
+        .collect()
+});
+
+// Get the templates
+#[inline]
 pub fn get_template(name: &str) -> Option<&'static Template> {
-    TEMPLATES.iter().find(|t| t.name == name)
+    TEMPLATE_MAP.get(name)
 }
-
-// note, please optimise this to its peak
-// We need performance here, not just static shit

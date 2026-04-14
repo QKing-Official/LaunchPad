@@ -36,7 +36,7 @@ pub async fn get_stats(
         Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error":e.to_string()}))).into_response(),
     };
 
-    // CPU %
+    // CPU usage monitoring
     let cpu_now  = s["cpu_stats"]["cpu_usage"]["total_usage"].as_u64().unwrap_or(0);
     let cpu_pre  = s["precpu_stats"]["cpu_usage"]["total_usage"].as_u64().unwrap_or(0);
     let sys_now  = s["cpu_stats"]["system_cpu_usage"].as_u64().unwrap_or(0);
@@ -63,7 +63,7 @@ pub async fn get_stats(
         ))
     } else { (0, 0) };
 
-    // Block I/O
+    // Block I/O monitoringg
     let (blk_r, blk_w) = if let Some(ops) = s["blkio_stats"]["io_service_bytes_recursive"].as_array() {
         ops.iter().fold((0u64, 0u64), |(r, w), op| {
             let v = op["value"].as_u64().unwrap_or(0);

@@ -1,5 +1,5 @@
 // Imports
-
+// * Replace this later on, this is the worst shit ever
 use axum::{
     body::Bytes,
     extract::{Path, Query, State},
@@ -21,7 +21,9 @@ pub struct FileQuery {
     pub name: Option<String>,
 }
 
-// Sanitisation
+// Sanitisation. Keep your hands clean folks!
+// We prevent the basic faults that might crash the daemon
+// Isolate everything and string escaping will not be easy
 fn validate_path(path: &str) -> Result<(), &'static str> {
     if path.is_empty() {
         return Err("path must not be empty");
@@ -32,7 +34,9 @@ fn validate_path(path: &str) -> Result<(), &'static str> {
     Ok(())
 }
 
-/// Validate a filename and only reject null bytes.
+// Validate a filename and only reject null bytes
+// null bytes can give an error or can be used to flood the daemon
+// Because of that, we prevent it.
 fn validate_filename(name: &str) -> Result<(), &'static str> {
     if name.is_empty() {
         return Err("filename must not be empty");
@@ -44,6 +48,9 @@ fn validate_filename(name: &str) -> Result<(), &'static str> {
 }
 
 // Listing and reading files
+// For files we use exec in the background secretly
+// I have to patch this to prevent floods
+// and bigger uploads
 pub async fn list_or_read(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -66,6 +73,7 @@ pub async fn list_or_read(
     }
 
     // Use an array form of exec to avoid shell injection
+    // Please turn this into sftp later on
     let check = state.docker.exec(
         &cid,
         vec!["sh".into(), "-c".into(),
@@ -88,6 +96,7 @@ pub async fn list_or_read(
         }
         Ok(_) => {
             // Pass path as an argument to `cat`, not via shell interpolation
+            // Also make this sftp
             match state.docker.exec(&cid, vec!["cat".into(), "--".into(), path.clone()], None).await {
                 Ok(contents) => (StatusCode::OK, Json(json!({"type":"file","path":path,"contents":contents}))).into_response(),
                 Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error":e.to_string()}))).into_response(),
@@ -99,13 +108,21 @@ pub async fn list_or_read(
 
 
 // Uploading files
+// This is once again done with exec
+// We take the raw data and put it through an exec statement
+// This is not safe and I need to patch this
+// SFTP should be a way better solution
+// So I need to figure out what SFTP does behind the scenes
 pub async fn upload_file(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     Query(q): Query<FileQuery>,
     body: Bytes,
 ) -> impl IntoResponse {
-    // Enforce a reasonable upload size limit (10 MiB)
+    // Enforce a reasonable upload size limit (10 MiB) (soon more due sftp)
+    // I can increase this when I turn the the dark side and use sftp
+    // So:
+    // TODO: ADD FUCKING SFTP!!!!!!!!!!!!!!!!!!!!!
     const MAX_UPLOAD_BYTES: usize = 10 * 1024 * 1024;
     if body.len() > MAX_UPLOAD_BYTES {
         return (StatusCode::PAYLOAD_TOO_LARGE,
@@ -148,6 +165,9 @@ pub async fn upload_file(
     }
 
     // Write decoded bytes directly; pass b64 as stdin, not as a shell argument.
+    // This is prone to security risks.
+    // TODO: Add fucking sftp. I cant keep doing this all day. And sorry for the reviewer for those crazy comments
+    // TODO: Write better comments and just prevent letting the reviewer fall to sleep
     let cmd = format!("base64 -d > '{}'", dest.replace('\'', "'\\''"));
     match state.docker.exec(
         &cid,
@@ -160,6 +180,11 @@ pub async fn upload_file(
 }
 
 // Deletion of files
+// For the deletion of files we use rm behind the scenes.
+// This is not perfect at all
+// But holy shit I dont know how to replace this
+// So dont expect this to be removed....
+// Sorry in advance
 pub async fn delete_file(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -185,6 +210,10 @@ pub async fn delete_file(
     }
 
     // Pass path as an exec argument
+    // And use rm -rf
+    // Forcing file removal wasn't the best idea
+    // But ehhhh, I stick to it
+    // This isnt really my priority atm
     match state.docker.exec(
         &cid,
         vec!["rm".into(), "-rf".into(), "--".into(), path.clone()],

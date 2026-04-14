@@ -18,6 +18,7 @@ use crate::server::state::{AppState, PortMappingRecord};
 /// Valid port range for user-facing external ports.
 /// Ports below 1024 are privileged; ports above 65535 are invalid.
 /// We further restrict to the unprivileged dynamic range.
+/// We dont care about what port the user wants....
 const MIN_PORT: u16 = 1024;
 const MAX_PORT: u16 = 65535;
 
@@ -31,14 +32,15 @@ fn validate_port(port: u16) -> Result<(), &'static str> {
     if port < MIN_PORT {
         return Err("port must be ≥ 1024 (privileged ports are not allowed)");
     }
-    // u16 max is 65535 — always valid, but be explicit
+    // u16 max is 65535 is valid, but it cant be any higher.
     if port > MAX_PORT {
         return Err("port must be ≤ 65535");
     }
     Ok(())
 }
 
-// List ports assigned to an app
+// List ports assigned to an app so that the user can retrieve them and properly integrate them
+// We intergrate the mapping as well, but in another function
 pub async fn list_ports(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -49,7 +51,11 @@ pub async fn list_ports(
     }
 }
 
-// Add a port mapping
+// Add a port mapping so the user can have for example a service running on port 80
+// For example their public port is 80000, so they cant acces it.
+// With the port mapping they can mape 80 internal to 80000 external
+// That means that the user can make the service publically available on the external point that it's assigned.
+
 pub async fn add_port(
     State(state): State<Arc<AppState>>,
     Path(app_id): Path<Uuid>,
@@ -89,6 +95,11 @@ pub async fn add_port(
 }
 
 // Delete a port mapping
+// For example the user has a service on port 443, but the previous mapping was made 80 -> 80000
+// That means they cant acces it publically.
+// With this function you can delete the existing mapping
+// That makes the user able to create a new one
+// Problem solved
 pub async fn delete_port(
     State(state): State<Arc<AppState>>,
     Path((app_id, mapping_id)): Path<(Uuid, Uuid)>,

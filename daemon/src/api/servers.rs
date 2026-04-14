@@ -7,6 +7,8 @@ use std::sync::Arc;
 use crate::server::state::AppState;
 
 // Fetch server information from docker/client.rs
+// This info can later be parsed into various kinds of requests
+// This is also used in the output when fetching the specific server
 pub async fn server_info(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     match state.docker.docker.info().await {
         Ok(info) => {

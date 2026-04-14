@@ -98,6 +98,9 @@ pub async fn create_webhook(
 }
 
 // Delete an existing webhook
+// BE GONE!
+// If a webhook is leaked, we of course need to delete the sending process.
+// This ensures safety of data
 pub async fn delete_webhook(
     State(state): State<Arc<AppState>>,
     Path((app_id, wh_id)): Path<(Uuid, Uuid)>,

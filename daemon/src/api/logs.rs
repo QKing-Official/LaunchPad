@@ -15,6 +15,7 @@ use crate::db::queries;
 use crate::server::state::AppState;
 
 /// Maximum lines returnable in a single request.
+/// We are not flooding our own servers with our own requests.
 const MAX_TAIL_LINES: u64 = 10_000;
 
 #[derive(Debug, Deserialize)]
@@ -23,6 +24,11 @@ pub struct LogsQuery {
 }
 
 // Get container logs
+// The container logs you can acces from the shell itself
+// But wouldnt it be nice to visualise it?
+// That is why this route exists
+// You can put in a query and you can view the logs that it will give
+// That way I can make it a nice gui in the panel later on
 pub async fn get_logs(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,

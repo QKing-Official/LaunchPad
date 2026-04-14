@@ -43,6 +43,11 @@ pub async fn list_tokens(
 }
 
 // Create a token
+// So the user can safely authenticate without the risk of leaking the daemon key
+// WHEN THE DAEMON KEY IS LEAKED THERE WILL BE CHAOS UPON THIS REALM
+// PREVENT THE LEAKAGE OF ANY INFORMATION ABOUT IT!
+// GOOD LUCK DEAR TRAVELLER!
+// (Dont mind this, I'm running low on caffeine)
 pub async fn create_token(
     State(state): State<Arc<AppState>>,
     Path(app_id): Path<Uuid>,

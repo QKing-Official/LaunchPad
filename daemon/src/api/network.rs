@@ -20,6 +20,7 @@ pub struct ConnectRequest {
 }
 
 // Get network information for an app
+// For example if its created and for what container
 pub async fn get_network(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -37,7 +38,13 @@ pub async fn get_network(
     }))).into_response()
 }
 
-// Connect two apps to share a network
+// Connect
+// At the moment you cant communicate between containers
+// The networks are isolated from each other
+// We need to solve that
+// Thats why I added network connections
+// With this you can make a network where 2 or more containers are placed on
+// This makes you able to send requests between them
 pub async fn connect_apps(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -75,6 +82,12 @@ pub async fn connect_apps(
 }
 
 // Disconnect two apps
+// Do you hate the other person to which you connected?
+// We got you!
+// This allows you to break the shared network.
+// You will be put on a isolated network again.
+// Problem solved once again
+
 pub async fn disconnect_apps(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,

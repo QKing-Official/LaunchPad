@@ -1,0 +1,9 @@
+[
+  { "name": "python",  "image": "python:3.12-slim", "default_internal_port": 8000 },
+  { "name": "node",    "image": "node:20-slim",     "default_internal_port": 3000 },
+  { "name": "rust",    "image": "rust:latest",      "default_internal_port": 8080 },
+  { "name": "ubuntu22","image": "ubuntu:22.04",     "default_internal_port": 22   },
+  { "name": "ubuntu24","image": "ubuntu:24.04",     "default_internal_port": 22   },
+  { "name": "alpine",  "image": "alpine:latest",    "default_internal_port": 22   },
+  { "name": "postgres","image": "postgres:16",      "default_internal_port": 5432 }
+]
