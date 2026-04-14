@@ -1,9 +1,61 @@
 [
-  { "name": "python",  "image": "python:3.12-slim", "default_internal_port": 8000 },
-  { "name": "node",    "image": "node:20-slim",     "default_internal_port": 3000 },
-  { "name": "rust",    "image": "rust:latest",      "default_internal_port": 8080 },
-  { "name": "ubuntu22","image": "ubuntu:22.04",     "default_internal_port": 22   },
-  { "name": "ubuntu24","image": "ubuntu:24.04",     "default_internal_port": 22   },
-  { "name": "alpine",  "image": "alpine:latest",    "default_internal_port": 22   },
-  { "name": "postgres","image": "postgres:16",      "default_internal_port": 5432 }
+  { "name": "python",        "image": "python:3.12-slim",        "default_internal_port": 8000 },
+  { "name": "node",          "image": "node:20-slim",            "default_internal_port": 3000 },
+  { "name": "rust",          "image": "rust:latest",             "default_internal_port": 8080 },
+  { "name": "ubuntu22",      "image": "ubuntu:22.04",            "default_internal_port": 22 },
+  { "name": "ubuntu24",      "image": "ubuntu:24.04",            "default_internal_port": 22 },
+  { "name": "alpine",        "image": "alpine:latest",           "default_internal_port": 22 },
+  { "name": "postgres",      "image": "postgres:16",             "default_internal_port": 5432 },
+
+  { "name": "fastapi",       "image": "python:3.12-slim",        "default_internal_port": 8000 },
+  { "name": "django",        "image": "python:3.12",             "default_internal_port": 8000 },
+  { "name": "flask",         "image": "python:3.12-slim",        "default_internal_port": 5000 },
+  { "name": "express",       "image": "node:20-slim",            "default_internal_port": 3000 },
+  { "name": "nestjs",        "image": "node:20",                 "default_internal_port": 3000 },
+  { "name": "deno",          "image": "denoland/deno",           "default_internal_port": 8000 },
+  { "name": "bun",           "image": "oven/bun",                "default_internal_port": 3000 },
+  { "name": "go",            "image": "golang:1.22",             "default_internal_port": 8080 },
+
+  { "name": "mysql",         "image": "mysql:8",                 "default_internal_port": 3306 },
+  { "name": "mariadb",       "image": "mariadb:11",              "default_internal_port": 3306 },
+  { "name": "mongodb",       "image": "mongo:7",                 "default_internal_port": 27017 },
+  { "name": "redis",         "image": "redis:7",                 "default_internal_port": 6379 },
+  { "name": "sqlite",        "image": "nouchka/sqlite3",         "default_internal_port": 0 },
+  { "name": "elasticsearch", "image": "elasticsearch:8",         "default_internal_port": 9200 },
+  { "name": "meilisearch",   "image": "getmeili/meilisearch",    "default_internal_port": 7700 },
+
+  { "name": "jupyter",       "image": "jupyter/base-notebook",   "default_internal_port": 8888 },
+  { "name": "pytorch",       "image": "pytorch/pytorch",         "default_internal_port": 8888 },
+  { "name": "tensorflow",    "image": "tensorflow/tensorflow",   "default_internal_port": 8888 },
+  { "name": "ollama",        "image": "ollama/ollama",           "default_internal_port": 11434 },
+  { "name": "mlflow",        "image": "ghcr.io/mlflow/mlflow",   "default_internal_port": 5000 },
+
+  { "name": "docker",        "image": "docker:dind",             "default_internal_port": 2375 },
+  { "name": "gitlab-runner", "image": "gitlab/gitlab-runner",    "default_internal_port": 8093 },
+  { "name": "jenkins",       "image": "jenkins/jenkins:lts",     "default_internal_port": 8080 },
+  { "name": "sonarqube",     "image": "sonarqube:latest",        "default_internal_port": 9000 },
+
+  { "name": "nginx",         "image": "nginx:latest",            "default_internal_port": 80 },
+  { "name": "apache",        "image": "httpd:latest",            "default_internal_port": 80 },
+  { "name": "traefik",       "image": "traefik:v3.0",            "default_internal_port": 8080 },
+  { "name": "caddy",         "image": "caddy:latest",            "default_internal_port": 80 },
+  { "name": "haproxy",       "image": "haproxy:latest",          "default_internal_port": 80 },
+
+  { "name": "debian",        "image": "debian:bookworm",         "default_internal_port": 22 },
+  { "name": "kali",          "image": "kalilinux/kali-rolling",  "default_internal_port": 22 },
+  { "name": "arch",          "image": "archlinux:latest",        "default_internal_port": 22 },
+  { "name": "openssh",       "image": "linuxserver/openssh-server", "default_internal_port": 2222 },
+
+  { "name": "minecraft",     "image": "itzg/minecraft-server",   "default_internal_port": 25565 },
+  { "name": "valheim",       "image": "lloesche/valheim-server", "default_internal_port": 2456 },
+  { "name": "csgo",          "image": "cm2network/csgo",         "default_internal_port": 27015 },
+
+  { "name": "prometheus",    "image": "prom/prometheus",         "default_internal_port": 9090 },
+  { "name": "grafana",       "image": "grafana/grafana",         "default_internal_port": 3000 },
+  { "name": "loki",          "image": "grafana/loki",            "default_internal_port": 3100 },
+  { "name": "kibana",        "image": "kibana:8",                "default_internal_port": 5601 },
+
+  { "name": "nextcloud",     "image": "nextcloud",               "default_internal_port": 80 },
+  { "name": "minio",         "image": "minio/minio",             "default_internal_port": 9000 },
+  { "name": "filebrowser",   "image": "filebrowser/filebrowser", "default_internal_port": 8080 }
 ]

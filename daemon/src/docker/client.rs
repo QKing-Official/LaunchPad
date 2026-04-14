@@ -136,7 +136,7 @@ impl DockerClient {
     }
 
     // Remove the container, probably useful for user management later on for whoever builds around this daemon.
-    // It litterly removes it, no bullshit
+    // It litterly removes it, no bullshit. Just pure removal!
     pub async fn remove_container(&self, id: &str) -> Result<(), bollard::errors::Error> {
         use bollard::query_parameters::RemoveContainerOptionsBuilder;
         self.docker.remove_container(id,
