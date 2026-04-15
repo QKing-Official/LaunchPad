@@ -4,6 +4,7 @@ This is the LaunchPad daemon. This is a simple, fast and highly optimised daemon
 This project uses bollard to interact with docker and Postgresql as database.
 This Daemon is kept simple and should be used on projects that do not require a giant daemon like Pterodactyl Wings.
 Even though this daemon is small, I've added a couple nice features.
+It is linux only and I have developed it on ubuntu 22.04 server.
 
 ## API
 
@@ -50,7 +51,10 @@ User token endpoints are endpoints that can be used with the app-key that can be
 
 ## How to use it?
 
-You can check out the demo on https://launchpad.qking.me but many features are locked for safety of my own systems. I advise you to run it yourself. For the full endpoint and API documentation, see the README in the daemon folder
+// NOTE: YOU NEED BASIC LINUX KNOWLEDGE FOR THIS
+// SOME COMMANDS MAY DIFFER ON YOUR DISTRO!
+
+You can check out the demo on https://launchpad.qking.me but many features are locked for safety of my own systems. I advise you to run it yourself. For the full endpoint and API documentation, see the README in the daemon folder.
 
 ### Step 1 dependencies
 
@@ -70,9 +74,15 @@ Now that we have installed all dependecies, we can setup the files required to r
 Download the binary from the github release page and put it inside a directory of choice.
 
 We will need to create the database fist.
-Run `psql -U postgres` to enter the postgresql console.
+Run `sudo -u postgres psql` to enter the postgresql console.
 We will have to create a database there. You can do it using the following command `CREATE DATABASE daemon;`.
 This creates a database named daemon, you can put any name you want there but you will have to change something later.
+Set up the user for the database next and give acces to it. Replace the password with a secure one you made up or generated. If you used another database name replace it as well. You can also choose another username, but I would not prefer that.
+
+```sql
+CREATE USER daemon WITH PASSWORD 'your_secure_password';
+GRANT ALL PRIVILEGES ON DATABASE daemon TO daemon;
+```
 To exit the postgresql shell run `\q`.
 
 Now that we have setup the database we need to setup the directories for volumes that can be mounted to the containers. Do that by running the following commands.
