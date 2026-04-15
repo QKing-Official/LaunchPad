@@ -12,9 +12,7 @@ mod config;
 mod db;
 mod docker;
 mod filesystem;
-mod monitoring;
 mod server;
-mod utils;
 
 use crate::docker::client::DockerClient;
 use crate::server::state::AppState;
@@ -51,6 +49,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // Restrict CORS
+    // Next ship I am planning to make a environment variable to allow cors
     let allowed_origin = std::env::var("ALLOWED_ORIGIN")
         .unwrap_or_else(|_| "http://localhost:3000".to_string());
 
@@ -70,8 +69,11 @@ async fn main() -> anyhow::Result<()> {
 
     // Bind to localhost only by default 
     // set BIND_ADDR=0.0.0.0:8000 to expose externally
-    let bind_addr = std::env::var("BIND_ADDR")
-        .unwrap_or_else(|_| format!("127.0.0.1:{}", cfg.port));
+    let bind_addr = match std::env::var("BIND_ADDR") {
+        Ok(addr) if addr.contains(':') => addr, // already has port
+        Ok(host) => format!("{}:{}", host, cfg.port),
+        Err(_) => format!("127.0.0.1:{}", cfg.port),
+    };
     let listener = TcpListener::bind(&bind_addr).await?;
     info!("Daemon listening on http://{}", bind_addr);
 

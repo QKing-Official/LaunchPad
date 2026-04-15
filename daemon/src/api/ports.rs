@@ -33,6 +33,7 @@ fn validate_port(port: u16) -> Result<(), &'static str> {
         return Err("port must be ≥ 1024 (privileged ports are not allowed)");
     }
     // u16 max is 65535 is valid, but it cant be any higher.
+    // Maybe I went overkill with tis
     if port > MAX_PORT {
         return Err("port must be ≤ 65535");
     }

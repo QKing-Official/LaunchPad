@@ -60,11 +60,10 @@ impl DockerClient {
     pub async fn create_container(&self, cfg: ContainerConfig) -> Result<String, bollard::errors::Error> {
         let mut bindings: HashMap<String, Option<Vec<PortBinding>>> = HashMap::new();
         for (internal, external) in &cfg.port_bindings {
-            // Bind to 127.0.0.1 instead of 0.0.0.0 so containers are not
-            // exposed on all interfaces.
+            // Bind to 0.0.0.0 tcp since I want to acces it with local ranges as well
             bindings.insert(format!("{}/tcp", internal),
                 Some(vec![PortBinding {
-                    host_ip:   Some("127.0.0.1".to_string()),
+                    host_ip:   Some("0.0.0.0".to_string()),
                     host_port: Some(external.to_string()),
                 }]));
         }

@@ -102,31 +102,3 @@ Check the API routes yourself:
 | GET | `/apps/{id}/tokens` | List per-app tokens |
 | POST | `/apps/{id}/tokens` | Create a scoped token (only valid for this app's endpoints) <br> _Body: label? — token value shown once, format: lp_…_ |
 | DELETE | `/apps/{id}/tokens/{tok_id}` | Revoke a token |
-
-## My journey
-
-I wanted to make a host where people could get a free container to host their HackClub project on (I'm not affiliated with HackClub).
-Since hackclub is coding related I just cant use an existing panel in my mindset.
-That is why I am writing this daemon and I am going to build a panel on top of it.
-This daemon is written in Rust and can compile to single binary.
-This uses postgressql and is pretty optimised I must say.
-I am also submitting this into the lockin sidequest of HackClub.
-
-This is the solution, a custom daemon with all features I need.
-Some are weird I must say. For example webhooks and the network isolation.
-I wanted it to be secure so I got to work.
-
-If you are reading this it is probably not done yet, but it works.
-I advise you to not use this in production at the time I write this.
-This readme will be updated and there will be stated otherwise when it is fully done.
-
-## Commenting
-
-For all comments I do not care, but if you wish to make it easier for me. Use this format:
-
-// TODO: → Orange
-// FIXME: → Red
-// NOTE: → Blue
-// * Important → Bold
-
-Thanks!
