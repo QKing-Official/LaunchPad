@@ -3,7 +3,7 @@
 This is the daemon for Launchpad.
 This daemon is build on top of docker with use of bollard.
 
-What features does it have?
+What features does it have? A couple!
 Check the API routes yourself:
 
 ## Daemon API Endpoints
